@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lesehjelp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open-Dyslexic&display=swap" rel="stylesheet">
+<style>
+  /* OpenDyslexic via CDN-fallback (Google har den ikke) */
+  @font-face {
+    font-family: 'OpenDyslexic';
+    src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/woff/OpenDyslexic-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'OpenDyslexic';
+    src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/woff/OpenDyslexic-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  :root {
+    --font-size: 18px;
+    --line-height: 1.7;
+    --letter-spacing: 0;
+    --word-spacing: 0;
+    --font-family: 'Lora', Georgia, serif;
+    --bg: #f7f3ec;
+    --bg-elev: #fffaf2;
+    --text: #1f1b16;
+    --text-soft: #5a5247;
+    --accent: #8a4a2b;
+    --border: rgba(31, 27, 22, 0.12);
+    --readline: rgba(138, 74, 43, 0.18);
+    --highlight: rgba(255, 220, 100, 0.55);
+  }
+
+  body.theme-light {
+    --bg: #fdfbf7;
+    --bg-elev: #ffffff;
+    --text: #1a1a1a;
+    --text-soft: #555;
+    --accent: #2b5a8a;
+    --border: rgba(0, 0, 0, 0.1);
+    --readline: rgba(43, 90, 138, 0.18);
+    --highlight: rgba(255, 220, 100, 0.6);
+  }
+
+  body.theme-dark {
+    --bg: #1a1814;
+    --bg-elev: #25221d;
+    --text: #ece6dc;
+    --text-soft: #9c9387;
+    --accent: #d4a574;
+    --border: rgba(236, 230, 220, 0.12);
+    --readline: rgba(212, 165, 116, 0.18);
+    --highlight: rgba(212, 165, 116, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+    letter-spacing: var(--letter-spacing);
+    word-spacing: var(--word-spacing);
+    transition: background 0.3s, color 0.3s;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body.font-dyslexic { --font-family: 'OpenDyslexic', sans-serif; }
+  body.font-atkinson { --font-family: 'Atkinson Hyperlegible', sans-serif; }
+
+  .page-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px 16px 140px;
+    min-height: 100vh;
+  }
+
+  /* ─── INNTASTINGS-SKJERM ─── */
+  .input-screen { display: block; }
+  .input-screen.hidden { display: none; }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-title {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--text);
+  }
+  .app-subtitle {
+    font-size: 13px;
+    color: var(--text-soft);
+    font-style: italic;
+    margin: 4px 0 0;
+  }
+
+  .input-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-soft);
+    margin: 24px 0 8px;
+  }
+
+  .title-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 18px;
+    background: var(--bg-elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .title-input:focus { border-color: var(--accent); }
+
+  .text-input {
+    width: 100%;
+    min-height: 280px;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1.6;
+    background: var(--bg-elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s;
+  }
+  .text-input:focus { border-color: var(--accent); }
+
+  .read-btn {
+    display: block;
+    width: 100%;
+    margin-top: 24px;
+    padding: 16px;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 600;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .read-btn:hover { opacity: 0.92; }
+  .read-btn:active { transform: scale(0.99); }
+  .read-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hint {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  /* ─── LESE-SKJERM ─── */
+  .read-screen { display: none; }
+  .read-screen.active { display: block; }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .back-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .back-btn:hover { background: var(--bg-elev); }
+
+  .read-meta {
+    font-size: 12px;
+    color: var(--text-soft);
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  .article-title {
+    font-family: 'Lora', serif;
+    font-weight: 600;
+    font-size: 1.6em;
+    line-height: 1.25;
+    margin: 24px 0 24px;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .article-body p {
+    margin: 0 0 1.1em;
+    transition: opacity 0.2s;
+  }
+
+  body.para-focus .article-body p { opacity: 0.35; }
+  body.para-focus .article-body p:hover,
+  body.para-focus .article-body p:focus,
+  body.para-focus .article-body p.para-active { opacity: 1; }
+
+  .article-body p.tts-active {
+    background: var(--highlight);
+    border-radius: 3px;
+  }
+
+  /* Bionic reading */
+  body.bionic .article-body b.bionic { font-weight: 700; }
+  .article-body b.bionic { font-weight: inherit; }
+
+  /* ─── LESELINJE ─── */
+  .read-line {
+    position: fixed;
+    left: 0;
+    right: 0;
+    height: 0;
+    background: var(--readline);
+    pointer-events: none;
+    z-index: 5;
+    display: none;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+  body.readline-on .read-line { display: block; }
+
+  /* ─── VERKTØYLINJE NEDERST ─── */
+  .toolbar-wrap {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+    z-index: 10;
+    display: none;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    backdrop-filter: blur(8px);
+  }
+  .read-screen.active ~ .toolbar-wrap,
+  body.show-toolbar .toolbar-wrap { display: block; }
+
+  .toolbar {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .toolbar::-webkit-scrollbar { display: none; }
+
+  .tool-btn {
+    flex: 0 0 auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tool-btn:hover { background: var(--bg); }
+  .tool-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .tool-btn .label { font-size: 12px; opacity: 0.85; }
+
+  /* Popover for innstillinger */
+  .popover {
+    position: fixed;
+    bottom: 70px;
+    left: 12px;
+    right: 12px;
+    max-width: 420px;
+    margin: 0 auto;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    z-index: 11;
+    display: none;
+  }
+  .popover.open { display: block; }
+  .popover h3 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+  .popover-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  .popover-row:last-child { margin-bottom: 0; }
+  .popover-row label {
+    font-size: 14px;
+    color: var(--text);
+  }
+  .popover-row .controls {
+    display: flex;
+    gap: 6px;
+  }
+  .pop-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 32px;
+  }
+  .pop-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .pop-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    max-width: 180px;
+  }
+  .pop-range {
+    width: 140px;
+  }
+
+  .close-pop {
+    display: block;
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* TTS-kontroller */
+  .tts-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  @media (max-width: 480px) {
+    .article-title { font-size: 1.4em; }
+    .top-bar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body class="theme-sepia">
+
+<div class="page-wrap">
+
+  <!-- INNTASTINGSSKJERM -->
+  <section class="input-screen" id="inputScreen">
+    <header class="app-header">
+      <div>
+        <h1 class="app-title">Lesehjelp</h1>
+        <p class="app-subtitle">Lim inn tekst — få en lettere lesbar versjon</p>
+      </div>
+    </header>
+
+    <label class="input-label" for="titleInput">Tittel (valgfritt)</label>
+    <input type="text" id="titleInput" class="title-input" placeholder="F.eks. «Kapittel 3 – Romantikken»">
+
+    <label class="input-label" for="textInput">Tekst</label>
+    <textarea id="textInput" class="text-input" placeholder="Lim inn teksten her. Skill avsnitt med blanke linjer."></textarea>
+    <p class="hint">Tips: Skill avsnitt med en blank linje mellom dem.</p>
+
+    <button class="read-btn" id="readBtn">Les teksten →</button>
+  </section>
+
+  <!-- LESESKJERM -->
+  <section class="read-screen" id="readScreen">
+    <div class="top-bar">
+      <button class="back-btn" id="backBtn">← Tilbake</button>
+      <div class="read-meta" id="readMeta"></div>
+    </div>
+    <h1 class="article-title" id="articleTitle"></h1>
+    <div class="article-body" id="articleBody"></div>
+  </section>
+
+</div>
+
+<!-- LESELINJE -->
+<div class="read-line" id="readLine"></div>
+
+<!-- VERKTØYLINJE -->
+<div class="toolbar-wrap" id="toolbarWrap">
+  <div class="toolbar" id="toolbar">
+
+    <!-- TTS kontroller -->
+    <div class="tts-controls">
+      <button class="tool-btn" id="ttsPlay" title="Spill av / pause">▶︎ <span class="label">Les opp</span></button>
+      <button class="tool-btn" id="ttsStop" title="Stopp">■</button>
+    </div>
+
+    <button class="tool-btn" id="btnTextSettings" title="Tekst-innstillinger">Aa <span class="label">Tekst</span></button>
+    <button class="tool-btn" id="btnTheme" title="Tema">◐ <span class="label">Tema</span></button>
+    <button class="tool-btn" id="btnVoice" title="Stemme & hastighet">🔊 <span class="label">Stemme</span></button>
+    <button class="tool-btn" id="btnFocus" title="Avsnittsfokus">¶ <span class="label">Fokus</span></button>
+    <button class="tool-btn" id="btnReadline" title="Leselinje">═ <span class="label">Linje</span></button>
+    <button class="tool-btn" id="btnBionic" title="Bionic reading"><b>B</b><span class="label">ionic</span></button>
+
+  </div>
+</div>
+
+<!-- POPOVER: Tekst -->
+<div class="popover" id="popText">
+  <h3>Tekstinnstillinger</h3>
+  <div class="popover-row">
+    <label>Skriftstørrelse</label>
+    <div class="controls">
+      <button class="pop-btn" data-fontsize="-1">A−</button>
+      <button class="pop-btn" data-fontsize="0">●</button>
+      <button class="pop-btn" data-fontsize="+1">A+</button>
+    </div>
+  </div>
+  <div class="popover-row">
+    <label>Linjehøyde</label>
+    <div class="controls">
+      <button class="pop-btn" data-lineheight="1.4">Tett</button>
+      <button class="pop-btn active" data-lineheight="1.7">Normal</button>
+      <button class="pop-btn" data-lineheight="2.1">Luftig</button>
+    </div>
+  </div>
+  <div class="popover-row">
+    <label>Bokstavavstand</label>
+    <input type="range" class="pop-range" id="letterSpacing" min="0" max="0.15" step="0.01" value="0">
+  </div>
+  <div class="popover-row">
+    <label>Ordavstand</label>
+    <input type="range" class="pop-range" id="wordSpacing" min="0" max="0.5" step="0.05" value="0">
+  </div>
+  <div class="popover-row">
+    <label>Skrifttype</label>
+    <select class="pop-select" id="fontFamily">
+      <option value="lora">Lora (klassisk)</option>
+      <option value="atkinson">Atkinson Hyperlegible</option>
+      <option value="dyslexic">OpenDyslexic</option>
+    </select>
+  </div>
+  <button class="close-pop" data-close="popText">Lukk</button>
+</div>
+
+<!-- POPOVER: Tema -->
+<div class="popover" id="popTheme">
+  <h3>Tema</h3>
+  <div class="popover-row">
+    <label>Bakgrunn</label>
+    <div class="controls">
+      <button class="pop-btn" data-theme="light">Lys</button>
+      <button class="pop-btn active" data-theme="sepia">Sepia</button>
+      <button class="pop-btn" data-theme="dark">Mørk</button>
+    </div>
+  </div>
+  <button class="close-pop" data-close="popTheme">Lukk</button>
+</div>
+
+<!-- POPOVER: Stemme -->
+<div class="popover" id="popVoice">
+  <h3>Høytlesning</h3>
+  <div class="popover-row">
+    <label>Stemme</label>
+    <select class="pop-select" id="voiceSelect"></select>
+  </div>
+  <div class="popover-row">
+    <label>Hastighet</label>
+    <input type="range" class="pop-range" id="rateRange" min="0.5" max="2" step="0.1" value="1">
+  </div>
+  <div class="popover-row">
+    <label style="font-size:12px; color: var(--text-soft); font-style: italic;">
+      Tips: Trykk på et avsnitt mens lesing er på pause for å starte derfra.
+    </label>
+  </div>
+  <button class="close-pop" data-close="popVoice">Lukk</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ─── State ─────────────────────────────────────────
+  const state = {
+    fontSizeStep: 0,        // -2 .. +4
+    baseFontSize: 18,
+    lineHeight: 1.7,
+    letterSpacing: 0,
+    wordSpacing: 0,
+    fontFamily: 'lora',
+    theme: 'sepia',
+    bionic: false,
+    paragraphs: [],         // array of { text, el }
+    voices: [],
+    selectedVoice: null,
+    rate: 1.0,
+    currentParaIdx: -1,
+    isPlaying: false,
+    isPaused: false,
+  };
+
+  // ─── DOM-referanser ────────────────────────────────
+  const $ = (id) => document.getElementById(id);
+  const inputScreen = $('inputScreen');
+  const readScreen = $('readScreen');
+  const titleInput = $('titleInput');
+  const textInput = $('textInput');
+  const readBtn = $('readBtn');
+  const backBtn = $('backBtn');
+  const articleTitle = $('articleTitle');
+  const articleBody = $('articleBody');
+  const readMeta = $('readMeta');
+  const toolbarWrap = $('toolbarWrap');
+  const readLine = $('readLine');
+
+  // ─── Skjermbytte ──────────────────────────────────
+  function showInput() {
+    inputScreen.classList.remove('hidden');
+    readScreen.classList.remove('active');
+    document.body.classList.remove('show-toolbar');
+    stopTTS();
+  }
+  function showRead() {
+    inputScreen.classList.add('hidden');
+    readScreen.classList.add('active');
+    document.body.classList.add('show-toolbar');
+    window.scrollTo(0, 0);
+  }
+
+  // ─── Tekst → avsnitt ───────────────────────────────
+  function renderText(title, raw) {
+    articleTitle.textContent = title || '';
+    articleTitle.style.display = title ? 'block' : 'none';
+    articleBody.innerHTML = '';
+    state.paragraphs = [];
+
+    // Splitt på tomme linjer; behandle enkelt-linjeskift som mellomrom innen avsnitt
+    const blocks = raw
+      .replace(/\r\n/g, '\n')
+      .split(/\n\s*\n+/)
+      .map(b => b.replace(/\n+/g, ' ').trim())
+      .filter(b => b.length > 0);
+
+    blocks.forEach((text, idx) => {
+      const p = document.createElement('p');
+      p.dataset.idx = idx;
+      p.tabIndex = 0;
+      renderParagraph(p, text);
+      articleBody.appendChild(p);
+      state.paragraphs.push({ text, el: p });
+    });
+
+    // Lesetid + ordtelling
+    const wordCount = raw.trim().split(/\s+/).filter(Boolean).length;
+    const minutes = Math.max(1, Math.round(wordCount / 200));
+    readMeta.innerHTML = `${wordCount} ord<br>~${minutes} min lesing`;
+  }
+
+  // Renderer ett avsnitt og håndterer bionic
+  function renderParagraph(el, text) {
+    if (state.bionic) {
+      el.innerHTML = bionicTransform(text);
+    } else {
+      el.textContent = text;
+    }
+  }
+
+  function bionicTransform(text) {
+    // Fete første halvdel (avrundet opp) av hvert ord
+    return text.replace(/[\p{L}\p{N}]+/gu, (word) => {
+      const n = Math.ceil(word.length / 2);
+      const head = escapeHtml(word.slice(0, n));
+      const tail = escapeHtml(word.slice(n));
+      return `<b class="bionic">${head}</b>${tail}`;
+    }).replace(/\n/g, '<br>');
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  function rerenderAllParagraphs() {
+    state.paragraphs.forEach(({ text, el }) => renderParagraph(el, text));
+  }
+
+  // ─── Inntasting → lesing ───────────────────────────
+  readBtn.addEventListener('click', () => {
+    const title = titleInput.value.trim();
+    const text = textInput.value.trim();
+    if (!text) {
+      textInput.focus();
+      return;
+    }
+    renderText(title, text);
+    showRead();
+  });
+  backBtn.addEventListener('click', () => {
+    showInput();
+  });
+
+  // ─── Popovers ──────────────────────────────────────
+  function closeAllPopovers() {
+    document.querySelectorAll('.popover').forEach(p => p.classList.remove('open'));
+  }
+  function togglePopover(id) {
+    const pop = $(id);
+    const wasOpen = pop.classList.contains('open');
+    closeAllPopovers();
+    if (!wasOpen) pop.classList.add('open');
+  }
+  $('btnTextSettings').addEventListener('click', () => togglePopover('popText'));
+  $('btnTheme').addEventListener('click', () => togglePopover('popTheme'));
+  $('btnVoice').addEventListener('click', () => togglePopover('popVoice'));
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => $(btn.dataset.close).classList.remove('open'));
+  });
+
+  // Klikk utenfor popover lukker den
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.popover')) return;
+    if (e.target.closest('.toolbar-wrap')) return;
+    closeAllPopovers();
+  });
+
+  // ─── Skriftstørrelse ───────────────────────────────
+  function applyFontSize() {
+    const size = state.baseFontSize + state.fontSizeStep * 2;
+    document.documentElement.style.setProperty('--font-size', size + 'px');
+  }
+  document.querySelectorAll('[data-fontsize]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.fontsize;
+      if (v === '0') state.fontSizeStep = 0;
+      else state.fontSizeStep = Math.max(-2, Math.min(6, state.fontSizeStep + parseInt(v)));
+      applyFontSize();
+    });
+  });
+
+  // ─── Linjehøyde ────────────────────────────────────
+  document.querySelectorAll('[data-lineheight]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.lineHeight = parseFloat(btn.dataset.lineheight);
+      document.documentElement.style.setProperty('--line-height', state.lineHeight);
+      document.querySelectorAll('[data-lineheight]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ─── Bokstav- og ordavstand ────────────────────────
+  $('letterSpacing').addEventListener('input', (e) => {
+    document.documentElement.style.setProperty('--letter-spacing', e.target.value + 'em');
+  });
+  $('wordSpacing').addEventListener('input', (e) => {
+    document.documentElement.style.setProperty('--word-spacing', e.target.value + 'em');
+  });
+
+  // ─── Skrifttype ────────────────────────────────────
+  $('fontFamily').addEventListener('change', (e) => {
+    document.body.classList.remove('font-dyslexic', 'font-atkinson');
+    if (e.target.value === 'dyslexic') document.body.classList.add('font-dyslexic');
+    else if (e.target.value === 'atkinson') document.body.classList.add('font-atkinson');
+    state.fontFamily = e.target.value;
+  });
+
+  // ─── Tema ──────────────────────────────────────────
+  document.querySelectorAll('[data-theme]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.body.classList.remove('theme-light', 'theme-sepia', 'theme-dark');
+      document.body.classList.add('theme-' + btn.dataset.theme);
+      document.querySelectorAll('[data-theme]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ─── Avsnittsfokus ─────────────────────────────────
+  $('btnFocus').addEventListener('click', () => {
+    document.body.classList.toggle('para-focus');
+    $('btnFocus').classList.toggle('active');
+  });
+  // Touch / klikk for å aktivere et avsnitt i fokus-modus
+  articleBody.addEventListener('click', (e) => {
+    const p = e.target.closest('p');
+    if (!p) return;
+    if (document.body.classList.contains('para-focus')) {
+      document.querySelectorAll('.para-active').forEach(el => el.classList.remove('para-active'));
+      p.classList.add('para-active');
+    }
+  });
+
+  // ─── Leselinje ─────────────────────────────────────
+  $('btnReadline').addEventListener('click', () => {
+    document.body.classList.toggle('readline-on');
+    $('btnReadline').classList.toggle('active');
+  });
+  function moveReadLine(clientY) {
+    if (!document.body.classList.contains('readline-on')) return;
+    const fs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-size'));
+    const lh = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--line-height'));
+    const h = fs * lh;
+    readLine.style.top = (clientY - h / 2) + 'px';
+    readLine.style.height = h + 'px';
+  }
+  document.addEventListener('mousemove', (e) => moveReadLine(e.clientY));
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) moveReadLine(e.touches[0].clientY);
+  }, { passive: true });
+
+  // ─── Bionic ────────────────────────────────────────
+  $('btnBionic').addEventListener('click', () => {
+    state.bionic = !state.bionic;
+    document.body.classList.toggle('bionic', state.bionic);
+    $('btnBionic').classList.toggle('active', state.bionic);
+    rerenderAllParagraphs();
+  });
+
+  // ─── Høytlesning (Web Speech API) ──────────────────
+  const synth = window.speechSynthesis;
+
+  function loadVoices() {
+    const all = synth.getVoices();
+    // Sorter: norsk først, så øvrige
+    const noVoices = all.filter(v => /^nb|^nn|^no/i.test(v.lang));
+    const other = all.filter(v => !/^nb|^nn|^no/i.test(v.lang));
+    state.voices = [...noVoices, ...other];
+    const sel = $('voiceSelect');
+    sel.innerHTML = '';
+    state.voices.forEach((v, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${v.name} (${v.lang})`;
+      sel.appendChild(opt);
+    });
+    if (state.voices.length > 0) {
+      state.selectedVoice = state.voices[0];
+      sel.value = 0;
+    }
+  }
+  if (synth) {
+    loadVoices();
+    if (typeof synth.onvoiceschanged !== 'undefined') {
+      synth.onvoiceschanged = loadVoices;
+    }
+  }
+  $('voiceSelect').addEventListener('change', (e) => {
+    state.selectedVoice = state.voices[parseInt(e.target.value)];
+  });
+  $('rateRange').addEventListener('input', (e) => {
+    state.rate = parseFloat(e.target.value);
+  });
+
+  function speakFrom(idx) {
+    if (!synth) return;
+    if (idx < 0 || idx >= state.paragraphs.length) {
+      stopTTS();
+      return;
+    }
+    state.currentParaIdx = idx;
+    highlightParagraph(idx);
+    const utter = new SpeechSynthesisUtterance(state.paragraphs[idx].text);
+    if (state.selectedVoice) utter.voice = state.selectedVoice;
+    utter.rate = state.rate;
+    utter.onend = () => {
+      // Gå til neste hvis vi fortsatt spiller
+      if (state.isPlaying && !state.isPaused) {
+        speakFrom(idx + 1);
+      }
+    };
+    utter.onerror = () => { /* swallow */ };
+    synth.speak(utter);
+  }
+
+  function highlightParagraph(idx) {
+    document.querySelectorAll('.tts-active').forEach(el => el.classList.remove('tts-active'));
+    const p = state.paragraphs[idx]?.el;
+    if (p) {
+      p.classList.add('tts-active');
+      // Scroll inn i view
+      p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function clearHighlight() {
+    document.querySelectorAll('.tts-active').forEach(el => el.classList.remove('tts-active'));
+  }
+
+  function playTTS() {
+    if (!synth) {
+      alert('Nettleseren støtter dessverre ikke høytlesning.');
+      return;
+    }
+    if (state.paragraphs.length === 0) return;
+
+    if (state.isPaused) {
+      synth.resume();
+      state.isPaused = false;
+      state.isPlaying = true;
+      updatePlayButton();
+      return;
+    }
+
+    if (state.isPlaying) {
+      // Pause
+      synth.pause();
+      state.isPaused = true;
+      state.isPlaying = false;
+      updatePlayButton();
+      return;
+    }
+
+    // Start fra gjeldende avsnitt eller 0
+    state.isPlaying = true;
+    state.isPaused = false;
+    const startIdx = state.currentParaIdx >= 0 ? state.currentParaIdx : 0;
+    speakFrom(startIdx);
+    updatePlayButton();
+  }
+
+  function stopTTS() {
+    if (synth) synth.cancel();
+    state.isPlaying = false;
+    state.isPaused = false;
+    state.currentParaIdx = -1;
+    clearHighlight();
+    updatePlayButton();
+  }
+
+  function updatePlayButton() {
+    const btn = $('ttsPlay');
+    if (state.isPlaying) {
+      btn.innerHTML = '⏸ <span class="label">Pause</span>';
+      btn.classList.add('active');
+    } else if (state.isPaused) {
+      btn.innerHTML = '▶︎ <span class="label">Fortsett</span>';
+      btn.classList.add('active');
+    } else {
+      btn.innerHTML = '▶︎ <span class="label">Les opp</span>';
+      btn.classList.remove('active');
+    }
+  }
+
+  $('ttsPlay').addEventListener('click', playTTS);
+  $('ttsStop').addEventListener('click', stopTTS);
+
+  // "Les fra her" — dobbelttrykk på avsnitt starter lesing der
+  articleBody.addEventListener('dblclick', (e) => {
+    const p = e.target.closest('p');
+    if (!p) return;
+    const idx = parseInt(p.dataset.idx);
+    stopTTS();
+    state.isPlaying = true;
+    state.isPaused = false;
+    speakFrom(idx);
+    updatePlayButton();
+  });
+
+  // For mobile: lang-trykk gjør det samme
+  let touchTimer = null;
+  articleBody.addEventListener('touchstart', (e) => {
+    const p = e.target.closest('p');
+    if (!p) return;
+    touchTimer = setTimeout(() => {
+      const idx = parseInt(p.dataset.idx);
+      stopTTS();
+      state.isPlaying = true;
+      state.isPaused = false;
+      speakFrom(idx);
+      updatePlayButton();
+    }, 600);
+  }, { passive: true });
+  articleBody.addEventListener('touchend', () => {
+    if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+  });
+  articleBody.addEventListener('touchmove', () => {
+    if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+  });
+
+  // Stopp TTS hvis brukeren forlater siden
+  window.addEventListener('beforeunload', () => {
+    if (synth) synth.cancel();
+  });
+
+})();
+</script>
+</body>
+</html>
