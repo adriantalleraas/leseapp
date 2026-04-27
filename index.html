@@ -744,7 +744,7 @@
     return chunks.filter(c => c.length > 0);
   }
 
-  function speakChunks(paraIdx, chunks, chunkIdx) {
+  function speakChunks(paraIdx, chunks, chunkIdx, voiceAttempts) {
     if (!synth) return;
     if (chunkIdx >= chunks.length) {
       // Ferdig med dette avsnittet — gå til neste
@@ -753,22 +753,42 @@
       }
       return;
     }
+    voiceAttempts = voiceAttempts || [];
     const utter = new SpeechSynthesisUtterance(chunks[chunkIdx]);
     if (state.selectedVoice) utter.voice = state.selectedVoice;
     utter.rate = state.rate;
     utter.lang = state.selectedVoice ? state.selectedVoice.lang : 'nb-NO';
     utter.onend = () => {
       if (state.isPlaying && !state.isPaused) {
-        speakChunks(paraIdx, chunks, chunkIdx + 1);
+        speakChunks(paraIdx, chunks, chunkIdx + 1, []);
       }
     };
     utter.onerror = (e) => {
       const errMsg = e.error || e.type || 'ukjent feil';
-      const voiceName = state.selectedVoice ? state.selectedVoice.name : 'standard';
-      $('ttsStatus').textContent = 'Feil («' + errMsg + '») med stemmen «' + voiceName + '». Prøv en annen stemme i lista, eller sjekk at telefonen har norske stemmer installert.';
-      state.isPlaying = false;
-      state.isPaused = false;
-      updateButtons();
+      const failedVoiceName = state.selectedVoice ? state.selectedVoice.name : 'standard';
+      voiceAttempts.push(failedVoiceName);
+
+      // Prøv neste stemme i lista som ikke har feilet ennå
+      const nextVoice = state.voices.find(v => !voiceAttempts.includes(v.name));
+      if (nextVoice && state.isPlaying) {
+        state.selectedVoice = nextVoice;
+        // Oppdater dropdown
+        const sel = $('voiceSelect');
+        const newIdx = state.voices.indexOf(nextVoice);
+        if (newIdx >= 0) sel.value = newIdx;
+        $('ttsStatus').textContent = '«' + failedVoiceName + '» feilet. Prøver «' + nextVoice.name + '»…';
+        // Liten pause før neste forsøk
+        setTimeout(() => {
+          if (state.isPlaying) speakChunks(paraIdx, chunks, chunkIdx, voiceAttempts);
+        }, 100);
+      } else {
+        // Alle stemmer har feilet
+        $('ttsStatus').textContent = 'Høytlesning er ikke tilgjengelig på denne enheten. Prøv en annen nettleser, eller sjekk telefonens innstillinger for tekst-til-tale (se etter «Talesyntese fra Google»).';
+        state.isPlaying = false;
+        state.isPaused = false;
+        clearHighlight();
+        updateButtons();
+      }
     };
     synth.speak(utter);
   }
@@ -779,7 +799,7 @@
     state.currentParaIdx = idx;
     highlightParagraph(idx);
     const chunks = chunkText(state.paragraphs[idx].text);
-    speakChunks(idx, chunks, 0);
+    speakChunks(idx, chunks, 0, []);
   }
 
   function highlightParagraph(idx) {
