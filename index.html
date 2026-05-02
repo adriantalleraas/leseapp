@@ -355,6 +355,10 @@
     margin: 8px 0;
   }
 
+  /* RSVP-ord-container: sentreringspunktet på skjermen.
+     "Før-ORP" justeres til høyre mot midtpunktet,
+     "etter-ORP" venstre fra midtpunktet,
+     ORP-bokstaven sitter selv på midtpunktet. */
   .rsvp-word {
     font-family: var(--font-family);
     font-size: clamp(36px, 8vw, 64px);
@@ -362,19 +366,32 @@
     line-height: 1;
     color: var(--text);
     letter-spacing: 0.02em;
-    text-align: center;
     user-select: none;
     white-space: nowrap;
-    /* Plasser ORP-bokstaven litt til venstre for sentrum */
-    /* Vi gjør det med en pseudo-justering i HTML */
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    width: 100%;
+    /* Bruk 50% som ankerlinje */
+    position: relative;
   }
-  body.font-dyslexic .rsvp-word { font-family: 'OpenDyslexic', sans-serif; }
-  body.font-atkinson .rsvp-word { font-family: 'Atkinson Hyperlegible', sans-serif; }
-
+  .rsvp-word .rsvp-before {
+    flex: 0 0 50%;
+    text-align: right;
+    padding-right: 0;
+  }
+  .rsvp-word .rsvp-after {
+    flex: 0 0 50%;
+    text-align: left;
+    padding-left: 0;
+  }
   .rsvp-word .orp {
     color: var(--accent);
     font-weight: 700;
+    flex: 0 0 auto;
   }
+  body.font-dyslexic .rsvp-word { font-family: 'OpenDyslexic', sans-serif; }
+  body.font-atkinson .rsvp-word { font-family: 'Atkinson Hyperlegible', sans-serif; }
 
   .rsvp-progress {
     width: 100%; max-width: 480px;
@@ -1216,7 +1233,10 @@
     const orpChar = escapeHtmlSimple(text.slice(orpAbs, orpAbs + 1));
     const after = escapeHtmlSimple(text.slice(orpAbs + 1));
 
-    $('rsvpWord').innerHTML = before + '<span class="orp">' + orpChar + '</span>' + after;
+    $('rsvpWord').innerHTML =
+      '<span class="rsvp-before">' + before + '</span>' +
+      '<span class="orp">' + orpChar + '</span>' +
+      '<span class="rsvp-after">' + after + '</span>';
 
     // Oppdater progress
     const pct = rsvp.words.length > 0 ? (rsvp.idx / rsvp.words.length) * 100 : 0;
