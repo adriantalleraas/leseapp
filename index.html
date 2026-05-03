@@ -144,6 +144,36 @@
   .read-btn:hover { opacity: 0.92; }
   .read-btn:active { transform: scale(0.99); }
 
+  .url-row {
+    display: flex; gap: 8px; align-items: stretch;
+  }
+  .url-row .title-input { flex: 1; }
+  .fetch-btn {
+    flex: 0 0 auto;
+    padding: 0 18px;
+    font-family: inherit; font-size: 15px; font-weight: 500;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+  }
+  .fetch-btn:hover { border-color: var(--accent); background: var(--bg-elev); }
+  .fetch-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  .fetch-status {
+    font-size: 13px; color: var(--text-soft);
+    margin: 8px 0 0; min-height: 1em;
+    font-style: italic;
+  }
+  .fetch-status.error { color: #b3372d; font-style: normal; }
+  .fetch-status.success { color: #2f7a44; font-style: normal; }
+
+  .optional {
+    font-weight: 400; text-transform: none;
+    letter-spacing: normal; font-style: italic;
+    color: var(--text-soft); opacity: 0.7;
+  }
+
   .hint { font-size: 13px; color: var(--text-soft); margin-top: 8px; font-style: italic; }
 
   .read-screen { display: none; }
@@ -501,11 +531,18 @@
       </div>
     </header>
 
+    <label class="input-label" for="urlInput">Hent fra nettside <span class="optional">(valgfritt)</span></label>
+    <div class="url-row">
+      <input type="url" id="urlInput" class="title-input" placeholder="Lim inn URL — f.eks. https://www.nrk.no/...">
+      <button class="fetch-btn" id="fetchBtn">Hent</button>
+    </div>
+    <p class="fetch-status" id="fetchStatus"></p>
+
     <label class="input-label" for="titleInput">Tittel (valgfritt)</label>
     <input type="text" id="titleInput" class="title-input" placeholder="F.eks. «Kapittel 3 – Romantikken»">
 
     <label class="input-label" for="textInput">Tekst</label>
-    <textarea id="textInput" class="text-input" placeholder="Lim inn teksten her. Skill avsnitt med blanke linjer."></textarea>
+    <textarea id="textInput" class="text-input" placeholder="Lim inn teksten her, eller hent fra en nettside ovenfor."></textarea>
     <p class="hint">Tips: Skill avsnitt med en blank linje mellom dem.</p>
 
     <button class="read-btn" id="readBtn">Les teksten →</button>
@@ -769,6 +806,140 @@
     warmUpTTS();
   });
   backBtn.addEventListener('click', showInput);
+
+  // ─── Hent artikkel fra URL via Jina Reader ─────────
+  const fetchBtn = $('fetchBtn');
+  const urlInput = $('urlInput');
+  const fetchStatus = $('fetchStatus');
+
+  function setFetchStatus(msg, type) {
+    fetchStatus.textContent = msg;
+    fetchStatus.classList.remove('error', 'success');
+    if (type) fetchStatus.classList.add(type);
+  }
+
+  // Parser Jina-output. Den begynner som regel med:
+  //   Title: ...
+  //   URL Source: ...
+  //   Published Time: ... (noen ganger)
+  //   Markdown Content:
+  //   <selve teksten>
+  function parseJinaResponse(raw) {
+    const lines = raw.split(/\r?\n/);
+    let title = '';
+    let contentStart = 0;
+    let foundContentMarker = false;
+
+    for (let i = 0; i < Math.min(lines.length, 20); i++) {
+      const line = lines[i];
+      const titleMatch = line.match(/^Title:\s*(.+)$/i);
+      if (titleMatch) title = titleMatch[1].trim();
+      if (/^Markdown Content:\s*$/i.test(line)) {
+        contentStart = i + 1;
+        foundContentMarker = true;
+        break;
+      }
+    }
+    // Hvis ingen "Markdown Content:"-markør, hopp over header-linjer
+    if (!foundContentMarker) {
+      for (let i = 0; i < lines.length; i++) {
+        if (/^(Title|URL Source|Published Time|Description|Author):/i.test(lines[i])) continue;
+        if (lines[i].trim() === '') { contentStart = i + 1; continue; }
+        contentStart = i;
+        break;
+      }
+    }
+
+    let body = lines.slice(contentStart).join('\n');
+
+    // Lett rens: fjern markdown-syntaks som forstyrrer lesing
+    body = body
+      // Bilder: ![alt](url) → fjern helt
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+      // Lenker: [tekst](url) → bare teksten
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // Overskrifter: ### Tittel → Tittel
+      .replace(/^#{1,6}\s+/gm, '')
+      // Fete/kursive: **tekst** → tekst, *tekst* → tekst
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      // Sitater: > tekst → tekst
+      .replace(/^>\s+/gm, '')
+      // Lister: - tekst eller * tekst → tekst
+      .replace(/^[-*+]\s+/gm, '')
+      // Tabell-skille-linjer (| --- | --- |) → fjern
+      .replace(/^\|?[\s\-|:]+\|?\s*$/gm, '')
+      // Horisontale skiller: --- eller *** → fjern
+      .replace(/^[-*_]{3,}\s*$/gm, '')
+      // Flere blanke linjer → maks to
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    return { title, body };
+  }
+
+  fetchBtn.addEventListener('click', async () => {
+    let url = urlInput.value.trim();
+    if (!url) { urlInput.focus(); return; }
+
+    // Legg til https:// hvis det mangler
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+      urlInput.value = url;
+    }
+
+    // Validér grovt
+    try { new URL(url); } catch (e) {
+      setFetchStatus('Ugyldig nettadresse.', 'error');
+      return;
+    }
+
+    fetchBtn.disabled = true;
+    fetchBtn.textContent = 'Henter…';
+    setFetchStatus('Henter artikkel — dette kan ta noen sekunder…');
+
+    try {
+      const jinaUrl = 'https://r.jina.ai/' + url;
+      const response = await fetch(jinaUrl, {
+        headers: { 'Accept': 'text/plain' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Tjenesten svarte med feil (' + response.status + ').');
+      }
+
+      const raw = await response.text();
+      if (!raw || raw.length < 50) {
+        throw new Error('Fikk lite eller ingen tekst tilbake. Siden støtter kanskje ikke uthenting, eller har en betalingsmur.');
+      }
+
+      const { title, body } = parseJinaResponse(raw);
+
+      if (!body || body.length < 50) {
+        throw new Error('Fant ikke artikkel-innhold på siden. Den kan være bak betalingsmur eller bruke et format som ikke støttes.');
+      }
+
+      // Fyll inn
+      if (title && !titleInput.value.trim()) titleInput.value = title;
+      textInput.value = body;
+      const wc = body.split(/\s+/).filter(Boolean).length;
+      setFetchStatus('Hentet ' + wc + ' ord. Kontrollér teksten og trykk «Les teksten».', 'success');
+    } catch (err) {
+      const msg = err && err.message ? err.message : 'Ukjent feil.';
+      setFetchStatus('Kunne ikke hente: ' + msg, 'error');
+    } finally {
+      fetchBtn.disabled = false;
+      fetchBtn.textContent = 'Hent';
+    }
+  });
+
+  // Trykk Enter i URL-feltet → hent
+  urlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      fetchBtn.click();
+    }
+  });
 
   function closeAllPopovers() {
     document.querySelectorAll('.popover').forEach(p => p.classList.remove('open'));
