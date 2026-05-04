@@ -528,6 +528,7 @@
     <button class="tool-btn" id="btnFocus" title="Avsnittsfokus">¶ <span class="label">Fokus</span></button>
     <button class="tool-btn" id="btnReadline" title="Leselinje">═ <span class="label">Linje</span></button>
     <button class="tool-btn" id="btnBionic" title="Bionic"><b>B</b><span class="label">ionic</span></button>
+    <button class="tool-btn" id="btnSave" title="Last ned offline-fil">⤓ <span class="label">Lagre</span></button>
   </div>
 </div>
 
@@ -1022,6 +1023,175 @@
     document.body.classList.toggle('bionic', on);
     $('btnBionic').classList.toggle('active', on);
     rerenderAllParagraphs();
+  });
+
+  // ─── Lagre som offline-fil ─────────────────────────
+  function escapeForJsString(s) {
+    return s
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r?\n/g, '\\n')
+      .replace(/<\/script>/gi, '<\\/script>');
+  }
+
+  function sanitizeFilename(s) {
+    return (s || 'lesehjelp')
+      .replace(/[\\/:*?"<>|]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+  }
+
+  function buildStandaloneFile() {
+    // Klone HTML-en og fjern det som ikke skal være i offline-versjonen
+    const html = document.documentElement.cloneNode(true);
+
+    // Fjern inntastingsskjerm og URL-henting (ikke nødvendig i offline-versjon)
+    const inputScreen = html.querySelector('#inputScreen');
+    if (inputScreen) inputScreen.remove();
+
+    // Fjern Tilbake-knappen — det er ingen forside å gå tilbake til
+    const backBtn = html.querySelector('#backBtn');
+    if (backBtn) backBtn.remove();
+
+    // Fjern Lagre-knappen i toolbaren — ingen grunn til å lagre på nytt
+    const btnSave = html.querySelector('#btnSave');
+    if (btnSave) btnSave.remove();
+
+    // Hent gjeldende state for å sette i bootstrap-skript
+    const title = articleTitle.textContent || '';
+    const fullText = state.paragraphs.map(p => p.text).join('\n\n');
+
+    // Bevar gjeldende UI-state
+    const themeClass = ['theme-light', 'theme-sepia', 'theme-dark', 'theme-contrast']
+      .find(c => document.body.classList.contains(c)) || 'theme-sepia';
+    const bgClass = ['bg-none', 'bg-yellow', 'bg-green', 'bg-blue', 'bg-peach']
+      .find(c => document.body.classList.contains(c)) || 'bg-none';
+    const fontClass = ['font-dyslexic', 'font-atkinson']
+      .find(c => document.body.classList.contains(c)) || '';
+    const bionicOn = document.body.classList.contains('bionic');
+
+    const fontSize = getComputedStyle(document.documentElement).getPropertyValue('--font-size').trim();
+    const lineHeight = getComputedStyle(document.documentElement).getPropertyValue('--line-height').trim();
+    const maxWidth = getComputedStyle(document.documentElement).getPropertyValue('--max-width').trim();
+    const letterSpacing = getComputedStyle(document.documentElement).getPropertyValue('--letter-spacing').trim();
+    const wordSpacing = getComputedStyle(document.documentElement).getPropertyValue('--word-spacing').trim();
+
+    // Lag bootstrap-skript som kjøres når den lagrede filen åpnes.
+    // Vi skriver "<scr"+"ipt>" og "</scr"+"ipt>" for å unngå at
+    // HTML-parseren tolker disse som ekte script-tagger inni denne filen.
+    const bootstrap = '<scr' + 'ipt>\n' + `
+(function(){
+  var TITLE = '${escapeForJsString(title)}';
+  var TEXT = '${escapeForJsString(fullText)}';
+  var THEME = '${themeClass}';
+  var BG = '${bgClass}';
+  var FONT = '${fontClass}';
+  var BIONIC = ${bionicOn};
+  var FS = '${fontSize}';
+  var LH = '${lineHeight}';
+  var MW = '${maxWidth}';
+  var LS = '${letterSpacing}';
+  var WS = '${wordSpacing}';
+
+  function init(){
+    document.body.className = THEME + ' ' + BG + (FONT ? ' ' + FONT : '') + (BIONIC ? ' bionic' : '') + ' show-toolbar';
+
+    if (FS) document.documentElement.style.setProperty('--font-size', FS);
+    if (LH) document.documentElement.style.setProperty('--line-height', LH);
+    if (MW) document.documentElement.style.setProperty('--max-width', MW);
+    if (LS) document.documentElement.style.setProperty('--letter-spacing', LS);
+    if (WS) document.documentElement.style.setProperty('--word-spacing', WS);
+
+    var rs = document.getElementById('readScreen');
+    if (rs) rs.classList.add('active');
+
+    var titleEl = document.getElementById('articleTitle');
+    if (titleEl) {
+      titleEl.textContent = TITLE;
+      titleEl.style.display = TITLE ? 'block' : 'none';
+    }
+
+    var body = document.getElementById('articleBody');
+    var paragraphs = TEXT.split(/\\n\\s*\\n+/).map(function(b){return b.replace(/\\n+/g,' ').trim();}).filter(Boolean);
+
+    paragraphs.forEach(function(t, i){
+      var p = document.createElement('p');
+      p.dataset.idx = i;
+      p.tabIndex = 0;
+      if (BIONIC) {
+        p.innerHTML = t.replace(/[\\p{L}\\p{N}]+/gu, function(w){
+          var n = Math.ceil(w.length/2);
+          return '<b class="bionic">' + w.slice(0,n) + '</b>' + w.slice(n);
+        });
+      } else {
+        p.textContent = t;
+      }
+      body.appendChild(p);
+    });
+
+    var wc = TEXT.trim().split(/\\s+/).filter(Boolean).length;
+    var min = Math.max(1, Math.round(wc/200));
+    var meta = document.getElementById('readMeta');
+    if (meta) meta.innerHTML = wc + ' ord<br>~' + min + ' min lesing';
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+` + '</scr' + 'ipt>';
+
+    // Marker at dette er en standalone-versjon (skjuler PWA-meta og henter-knapp i CSS)
+    const head = html.querySelector('head');
+    const marker = document.createElement('style');
+    marker.textContent = `
+/* Standalone-versjon: skjul ting som ikke er relevant offline */
+.input-screen { display: none !important; }
+#btnSave { display: none !important; }
+.read-screen { display: block !important; }
+body { overflow-x: hidden; }
+`;
+    head.appendChild(marker);
+
+    // Fjern PWA-manifest-lenken (offline-filen trenger ikke det)
+    const manifestLink = head.querySelector('link[rel="manifest"]');
+    if (manifestLink) manifestLink.remove();
+
+    // Sett offline-tittel
+    const titleTag = head.querySelector('title');
+    if (titleTag) titleTag.textContent = 'Lesehjelp – ' + (title || 'tekst');
+
+    // Bygg endelig HTML
+    let serialized = '<!DOCTYPE html>\n' + html.outerHTML;
+
+    // Sett inn bootstrap-skriptet rett før </body>
+    serialized = serialized.replace('</body>', bootstrap + '\n</body>');
+
+    return serialized;
+  }
+
+  $('btnSave').addEventListener('click', () => {
+    if (state.paragraphs.length === 0) return;
+    try {
+      const html = buildStandaloneFile();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const titleText = articleTitle.textContent || 'tekst';
+      const filename = 'Lesehjelp - ' + sanitizeFilename(titleText) + '.html';
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      alert('Kunne ikke lage filen: ' + (err.message || err));
+    }
   });
 
   // ─── Høytlesning ───────────────────────────────────
