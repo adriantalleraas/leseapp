@@ -1031,7 +1031,7 @@
       .replace(/\\/g, '\\\\')
       .replace(/'/g, "\\'")
       .replace(/\r?\n/g, '\\n')
-      .replace(/<\/script>/gi, '<\\/script>');
+      .replace(new RegExp('<' + '/scr' + 'ipt>', 'gi'), '<\\/scr' + 'ipt>');
   }
 
   function sanitizeFilename(s) {
